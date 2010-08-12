@@ -30,7 +30,7 @@ module Capybara
       :all, :attach_file, :body, :check, :choose, :click_link_or_button, :click_button, :click_link, :current_url, :drag, :evaluate_script,
       :field_labeled, :fill_in, :find, :find_button, :find_by_id, :find_field, :find_link, :has_content?, :has_css?,
       :has_no_content?, :has_no_css?, :has_no_xpath?, :has_xpath?, :locate, :save_and_open_page, :select, :source, :uncheck,
-      :visit, :wait_until, :within, :within_fieldset, :within_table, :within_frame, :has_link?, :has_no_link?, :has_button?,
+      :visit, :wait_until, :within, :within_fieldset, :within_table, :within_frame, :within_window, :window_handles, :has_link?, :has_no_link?, :has_button?,
       :has_no_button?, :has_field?, :has_no_field?, :has_checked_field?, :has_unchecked_field?, :has_no_table?, :has_table?,
       :unselect, :has_select?, :has_no_select?, :current_path, :scope_to, :click
     ]
@@ -202,6 +202,29 @@ module Capybara
 
     ##
     #
+    # Execute the given block within the given window given the id of that window. Only works on
+    # some drivers (e.g. Selenium)
+    #
+    # @param [String] locator    Id of the window
+    #
+    def within_window(window_id)
+      driver.within_window(window_id) do
+        yield
+      end
+    end
+
+    ##
+    #
+    # Returns the current windows (eg. when there are popups) Only works on
+    # some drivers (e.g. Selenium)
+    #
+    #
+    def window_handles
+      driver.window_handles
+    end
+    
+    ##
+    #
     # Retry executing the block until a truthy result is returned or the timeout time is exceeded
     #
     # @param [Integer] timeout   The amount of seconds to retry executing the given block
@@ -240,7 +263,7 @@ module Capybara
     # @deprecated click is deprecated, please use {Capybara::Node::Actions#click_link_or_button} instead
     #
     def click(locator)
-      warn "DEPRECATED: click is deprecated, use click_link_or_button instead"
+      # warn "DEPRECATED: click is deprecated, use click_link_or_button instead"
       current_node.click_link_or_button(locator)
     end
 

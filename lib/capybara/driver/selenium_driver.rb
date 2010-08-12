@@ -148,6 +148,18 @@ class Capybara::Driver::Selenium < Capybara::Driver::Base
     browser.switch_to.window old_window
   end
 
+  def within_window(window_id)
+    old_window = browser.window_handle
+    browser.switch_to.window(window_id)
+    yield
+    browser.switch_to.window old_window
+  end
+
+  def window_handles
+    browser.window_handles
+  end
+
+
 private
 
   def url(path)

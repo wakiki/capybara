@@ -39,6 +39,14 @@ class Capybara::Driver::Base
     raise Capybara::NotSupportedByDriverError
   end
 
+  def within_window(window_id)
+    raise Capybara::NotSupportedByDriverError
+  end
+  
+  def window_handles
+    raise Capybara::NotSupportedByDriverError
+  end
+  
   def wait?
     false
   end
