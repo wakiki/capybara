@@ -32,7 +32,7 @@ module Capybara
       :has_no_content?, :has_no_css?, :has_no_xpath?, :has_xpath?, :locate, :save_and_open_page, :select, :source, :uncheck,
       :visit, :wait_until, :within, :within_fieldset, :within_table, :within_frame, :within_window, :window_handles, :has_link?, :has_no_link?, :has_button?,
       :has_no_button?, :has_field?, :has_no_field?, :has_checked_field?, :has_unchecked_field?, :has_no_table?, :has_table?,
-      :unselect, :has_select?, :has_no_select?, :current_path, :scope_to, :click
+      :unselect, :has_select?, :has_no_select?, :current_path, :scope_to, :click, :see, :not_see
     ]
 
     attr_reader :mode, :app
@@ -288,8 +288,63 @@ module Capybara
       super || current_node.respond_to?(method)
     end
 
+    def see(*args)
+      options = args.extract_options!
+      options[:in] = options[:in].to_css if options[:in].kind_of?(ActiveRecord::Base)
+
+      if options[:in]
+        within :css, options[:in] do
+          see_without_options args
+        end
+      else
+        see_without_options args
+      end
+    end
+
+    def not_see(*args)
+      options = args.extract_options!
+      options[:in] = options[:in].to_css if options[:in].kind_of?(ActiveRecord::Base)
+
+      if options[:in]
+        within :css, options[:in] do
+          not_see_without_options args
+        end
+      else
+        not_see_without_options args
+      end
+    end
+
+    # not brilliant regex checking if string begins with html elements
+    def css?(string)
+      string =~ /^([#\.]|table|tr|td|th|h\d|[ou]l|li|[pa][\.#\s]|span|button|input)/
+    end
+
   private
 
+    def see_without_options(*args)
+      args.flatten.each do |arg|
+        if arg.kind_of?(ActiveRecord::Base)
+          find(arg.to_css)
+        elsif css?(arg)
+          raise Capybara::ElementNotFound, "Unable to find css '#{arg}' in #{current_node.inspect}" unless has_css?(arg)
+        else
+          raise Capybara::ElementNotFound, "Unable to find text '#{arg}' in #{current_node.inspect}" unless has_content?(arg)
+        end
+      end
+    end
+
+    def not_see_without_options(*args)
+      args.flatten.each do |arg|
+        if arg.kind_of?(ActiveRecord::Base)
+          raise "Found element #{arg.to_css} in #{current_node.inspect}" unless has_no_css?(arg.to_css)
+        elsif css?(arg)
+          raise "Found element '#{arg}' in #{current_node.inspect}" unless has_no_css?(arg)
+        else
+          raise "Found text '#{arg}' in #{current_node.inspect}" unless has_no_content?(arg)
+        end
+      end
+    end
+    
     def current_node
       scopes.last
     end
