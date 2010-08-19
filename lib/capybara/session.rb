@@ -32,7 +32,7 @@ module Capybara
       :has_no_content?, :has_no_css?, :has_no_xpath?, :has_xpath?, :locate, :save_and_open_page, :select, :source, :uncheck,
       :visit, :wait_until, :within, :within_fieldset, :within_table, :within_frame, :within_window, :window_handles, :has_link?, :has_no_link?, :has_button?,
       :has_no_button?, :has_field?, :has_no_field?, :has_checked_field?, :has_unchecked_field?, :has_no_table?, :has_table?,
-      :unselect, :has_select?, :has_no_select?, :current_path, :scope_to, :click, :see, :not_see
+      :unselect, :has_select?, :has_no_select?, :current_path, :scope_to, :click, :see, :not_see, :not_visible
     ]
 
     attr_reader :mode, :app
@@ -290,57 +290,73 @@ module Capybara
 
     def see(*args)
       options = args.extract_options!
-      options[:in] = options[:in].to_css if options[:in].kind_of?(ActiveRecord::Base)
+      in_scope = options.delete(:in)
+      in_scope = in_scope.to_css if in_scope and in_scope.kind_of?(ActiveRecord::Base)
+      args.push(options)
 
-      if options[:in]
-        within :css, options[:in] do
-          see_without_options args
+      if in_scope
+        within in_scope do
+          see_without_options *args
         end
       else
-        see_without_options args
+        see_without_options *args
       end
+      
     end
 
     def not_see(*args)
       options = args.extract_options!
-      options[:in] = options[:in].to_css if options[:in].kind_of?(ActiveRecord::Base)
+      in_scope = options.delete(:in)
+      in_scope = in_scope.to_css if in_scope and in_scope.kind_of?(ActiveRecord::Base)
+      args.push(options)
 
-      if options[:in]
-        within :css, options[:in] do
-          not_see_without_options args
+      if in_scope
+        within in_scope do
+          not_see_without_options *args
         end
       else
-        not_see_without_options args
+        not_see_without_options *args
       end
+    end
+
+    def not_visible(*args)
+      options = args.extract_options!
+      options.merge!(:visible => true)
+      args.push(options)
+      not_see *args
     end
 
     # not brilliant regex checking if string begins with html elements
     def css?(string)
-      string =~ /^([#\.]|table|tr|td|th|h\d|[ou]l|li|[pa][\.#\s]|span|button|input)/
+      string =~ /^([#\.]|table|tbody|fieldset|h\d|[pa(em)(tr)(td)(th)(ol)(ul)(li)][\.#\s:]|span|strong|button|input|form)/
     end
 
   private
 
     def see_without_options(*args)
+      options = if args.last.is_a?(Hash) then args.pop else {} end
       args.flatten.each do |arg|
         if arg.kind_of?(ActiveRecord::Base)
-          find(arg.to_css)
+          find(arg.to_css, options)
         elsif css?(arg)
-          raise Capybara::ElementNotFound, "Unable to find css '#{arg}' in #{current_node.inspect}" unless has_css?(arg)
+          raise Capybara::ElementNotFound, "Unable to find css '#{arg}' in #{current_node.inspect}" unless current_node.has_css?(arg, options)
         else
-          raise Capybara::ElementNotFound, "Unable to find text '#{arg}' in #{current_node.inspect}" unless has_content?(arg)
+          # raise "has_content? does not take options #{options}" unless options.empty?
+          raise Capybara::ElementNotFound, "Unable to find text '#{arg}' in #{current_node.inspect}" unless current_node.has_content?(arg)
         end
       end
     end
 
     def not_see_without_options(*args)
+      options = if args.last.is_a?(Hash) then args.pop else {} end
       args.flatten.each do |arg|
         if arg.kind_of?(ActiveRecord::Base)
-          raise "Found element #{arg.to_css} in #{current_node.inspect}" unless has_no_css?(arg.to_css)
+          raise "Found element #{arg.to_css} in #{current_node.inspect}" unless current_node.has_no_css?(arg.to_css, options)
         elsif css?(arg)
-          raise "Found element '#{arg}' in #{current_node.inspect}" unless has_no_css?(arg)
+          raise "Found element '#{arg}' in #{current_node.inspect}" unless current_node.has_no_css?(arg, options)
         else
-          raise "Found text '#{arg}' in #{current_node.inspect}" unless has_no_content?(arg)
+          # raise "has_content? does not take options #{options}" unless options.empty?
+          raise "Found text '#{arg}' in #{current_node.inspect}" unless current_node.has_no_content?(arg) == true
         end
       end
     end
